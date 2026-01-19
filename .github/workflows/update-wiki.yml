@@ -6,6 +6,7 @@ on:
     branches:
       - main
       - 'release-*'
+      - 'test-baseline-api-usage'
       
 permissions:
   contents: write

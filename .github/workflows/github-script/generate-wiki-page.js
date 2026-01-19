@@ -4,6 +4,21 @@ const fs = require('fs').promises;
 const { join } = require('path');
 const { load } = require('js-yaml');
 
+// Debug counters for API usage tracking
+const debugCounters = {
+  githubApiCalls: 0,
+  httpCalls: 0,
+  gitOperations: 0
+};
+
+function logDebugCounters(core) {
+  core.info('=== BASELINE API Usage Debug Report (ORIGINAL VERSION) ===');
+  core.info(`GitHub API calls: ${debugCounters.githubApiCalls}`);
+  core.info(`HTTP calls: ${debugCounters.httpCalls}`);
+  core.info(`Git operations: ${debugCounters.gitOperations}`);
+  core.info('=======================================================');
+}
+
 async function getWorkspaceList(workspacesDir, core) {
   try {
     const entries = await fs.readdir(workspacesDir, { withFileTypes: true });
@@ -64,6 +79,7 @@ async function getPluginDetails(octokit, repoUrl, commitSha, pluginPath, core) {
   const filePath = cleanPluginPath ? `${cleanPluginPath}/package.json` : 'package.json';
 
   try {
+    debugCounters.githubApiCalls++;
     const response = await octokit.rest.repos.getContent({
       owner,
       repo,
@@ -98,6 +114,7 @@ async function getCommitDetails(octokit, repoUrl, commitSha, core) {
   const [owner, repo] = repoName.split('/');
 
   try {
+    debugCounters.githubApiCalls++;
     const response = await octokit.rest.repos.getCommit({
       owner,
       repo,
@@ -139,6 +156,7 @@ async function checkPendingPRs(octokit, workspaceName, repoName, targetBranch, c
   const [owner, repo] = repoName.split('/');
 
   try {
+    debugCounters.githubApiCalls++;
     const response = await octokit.rest.pulls.list({
       owner,
       repo,
@@ -150,6 +168,7 @@ async function checkPendingPRs(octokit, workspaceName, repoName, targetBranch, c
     const prNumbers = [];
     for (const pr of response.data) {
       try {
+        debugCounters.githubApiCalls++;
         const filesResponse = await octokit.rest.pulls.listFiles({
           owner,
           repo,
@@ -211,6 +230,7 @@ async function getSourceBackstageVersion(octokit, repoUrl, commitSha, sourceData
     const [owner, repo] = repoName.split('/');
 
     try {
+      debugCounters.githubApiCalls++;
       const response = await octokit.rest.repos.getContent({
         owner,
         repo,
@@ -591,6 +611,7 @@ module.exports = async ({github, context, core}) => {
     const outputFile = `${safeBranchName}.md`;
     await fs.writeFile(outputFile, markdownContent, 'utf-8');
 
+    logDebugCounters(core);
     core.info(`Wiki page generated: ${outputFile}`);
     core.info(`Total workspaces documented: ${workspacesData.length}`);
   } catch (error) {
