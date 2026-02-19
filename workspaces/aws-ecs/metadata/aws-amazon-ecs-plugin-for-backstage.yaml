@@ -10,9 +10,9 @@ metadata:
     - url: https://github.com/awslabs/backstage-plugins-for-aws/issues
       title: Bugs
     - title: Source Code
-      url: https://github.com/awslabs/backstage-plugins-for-aws/tree/main/plugins/ecs/frontend
+      url: https://github.com/redhat-developer/rhdh-plugin-export-overlays/tree/main/workspaces/aws-ecs
   annotations:
-    backstage.io/source-location: url:https://github.com/awslabs/backstage-plugins-for-aws/tree/main/plugins/ecs/frontend
+    backstage.io/source-location: url:https://github.com/redhat-developer/rhdh-plugin-export-overlays/tree/main/workspaces/aws-ecs
   tags: []
 spec:
   packageName: "@aws/amazon-ecs-plugin-for-backstage"

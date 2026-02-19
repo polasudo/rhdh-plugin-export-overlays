@@ -10,9 +10,9 @@ metadata:
     - url: https://github.com/backstage/community-plugins/issues
       title: Bugs
     - title: Source Code
-      url: https://github.com/backstage/community-plugins/tree/main/workspaces/azure-devops/plugins/scaffolder-backend-module-azure-devops
+      url: https://github.com/redhat-developer/rhdh-plugin-export-overlays/tree/main/workspaces/azure-devops
   annotations:
-    backstage.io/source-location: url:https://github.com/backstage/community-plugins/tree/main/workspaces/azure-devops/plugins/scaffolder-backend-module-azure-devops
+    backstage.io/source-location: url:https://github.com/redhat-developer/rhdh-plugin-export-overlays/tree/main/workspaces/azure-devops
   tags:
     - software-templates
 spec:

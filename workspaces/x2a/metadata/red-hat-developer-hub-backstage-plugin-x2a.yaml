@@ -10,7 +10,7 @@ metadata:
     - url: https://github.com/redhat-developer/rhdh-plugins/issues
       title: Bugs
     - title: Source Code
-      url: https://github.com/redhat-developer/rhdh-plugins/tree/main/workspaces/x2a
+      url: https://github.com/redhat-developer/rhdh-plugin-export-overlays/tree/main/workspaces/x2a
   tags: []
 spec:
   packageName: "@red-hat-developer-hub/backstage-plugin-x2a"

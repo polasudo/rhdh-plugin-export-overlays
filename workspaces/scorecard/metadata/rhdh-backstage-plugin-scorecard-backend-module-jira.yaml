@@ -10,9 +10,9 @@ metadata:
     - url: https://issues.redhat.com/browse/RHDHBUGS
       title: "Report issues here. Note: Customers of Red Hat Developer Hub should raise a Red Hat support case instead."
     - title: Source Code
-      url: https://github.com/redhat-developer/rhdh-plugins/tree/main/workspaces/scorecard/plugins/scorecard-backend-module-jira
+      url: https://github.com/redhat-developer/rhdh-plugin-export-overlays/tree/main/workspaces/scorecard
   annotations:
-    backstage.io/source-location: url:https://github.com/redhat-developer/rhdh-plugins/tree/main/workspaces/scorecard/plugins/scorecard-backend-module-jira
+    backstage.io/source-location: url:https://github.com/redhat-developer/rhdh-plugin-export-overlays/tree/main/workspaces/scorecard
   tags:
     - analytics
 spec:

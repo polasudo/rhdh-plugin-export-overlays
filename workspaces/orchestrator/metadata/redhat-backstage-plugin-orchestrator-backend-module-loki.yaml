@@ -10,9 +10,9 @@ metadata:
     - url: https://issues.redhat.com/browse/RHIDP
       title: Bugs
     - title: Source Code
-      url: https://github.com/redhat-developer/rhdh-plugins/tree/main/workspaces/orchestrator/plugins/orchestrator-backend-module-loki
+      url: https://github.com/redhat-developer/rhdh-plugin-export-overlays/tree/main/workspaces/orchestrator
   annotations:
-    backstage.io/source-location: url:https://github.com/redhat-developer/rhdh-plugins/tree/main/workspaces/orchestrator/plugins/orchestrator-backend-module-loki
+    backstage.io/source-location: url:https://github.com/redhat-developer/rhdh-plugin-export-overlays/tree/main/workspaces/orchestrator
   tags:
     - automation
 spec:

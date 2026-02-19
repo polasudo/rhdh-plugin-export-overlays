@@ -10,9 +10,9 @@ metadata:
     - url: https://github.com/backstage/backstage/issues
       title: Bugs
     - title: Source Code
-      url: https://github.com/backstage/community-plugins/tree/main/workspaces/scaffolder-relation-processor
+      url: https://github.com/redhat-developer/rhdh-plugin-export-overlays/tree/main/workspaces/scaffolder-relation-processor
   annotations:
-    backstage.io/source-location: url:https://github.com/backstage/community-plugins/tree/main/workspaces/scaffolder-relation-processor
+    backstage.io/source-location: url:https://github.com/redhat-developer/rhdh-plugin-export-overlays/tree/main/workspaces/scaffolder-relation-processor
   tags:
     - software-templates
 spec:

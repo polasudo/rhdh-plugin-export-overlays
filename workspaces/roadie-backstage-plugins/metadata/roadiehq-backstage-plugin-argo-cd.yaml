@@ -10,9 +10,9 @@ metadata:
     - url: https://issues.redhat.com/browse/RHIDP
       title: Bugs
     - title: Source Code
-      url: https://github.com/RoadieHQ/roadie-backstage-plugins/tree/main/plugins/frontend/backstage-plugin-argo-cd
+      url: https://github.com/redhat-developer/rhdh-plugin-export-overlays/tree/main/workspaces/roadie-backstage-plugins
   annotations:
-    backstage.io/source-location: url:https://github.com/RoadieHQ/roadie-backstage-plugins/tree/main/plugins/frontend/backstage-plugin-argo-cd
+    backstage.io/source-location: url:https://github.com/redhat-developer/rhdh-plugin-export-overlays/tree/main/workspaces/roadie-backstage-plugins
   tags: []
 spec:
   packageName: "@roadiehq/backstage-plugin-argo-cd"

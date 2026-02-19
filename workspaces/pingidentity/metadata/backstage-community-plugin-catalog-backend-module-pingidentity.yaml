@@ -10,9 +10,9 @@ metadata:
     - url: https://github.com/backstage/community-plugins/issues
       title: Bugs
     - title: Source Code
-      url: https://github.com/backstage/community-plugins/tree/main/workspaces/pingidentity
+      url: https://github.com/redhat-developer/rhdh-plugin-export-overlays/tree/main/workspaces/pingidentity
   annotations:
-    backstage.io/source-location: url:https://github.com/backstage/community-plugins/tree/main/workspaces/pingidentity
+    backstage.io/source-location: url:https://github.com/redhat-developer/rhdh-plugin-export-overlays/tree/main/workspaces/pingidentity
   tags:
     - software-catalog
 spec:

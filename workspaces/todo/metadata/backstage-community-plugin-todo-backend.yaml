@@ -9,9 +9,9 @@ metadata:
     - url: https://github.com/backstage/community-plugins/blob/main/workspaces/todo/plugins/todo-backend/README.md
       title: Plugin Overview (README)
     - title: Source Code
-      url: https://github.com/backstage/community-plugins/tree/main/workspaces/todo/plugins/todo-backend
+      url: https://github.com/redhat-developer/rhdh-plugin-export-overlays/tree/main/workspaces/todo
   annotations:
-    backstage.io/source-location: url:https://github.com/backstage/community-plugins/tree/main/workspaces/todo
+    backstage.io/source-location: url:https://github.com/redhat-developer/rhdh-plugin-export-overlays/tree/main/workspaces/todo
   tags: []
 spec:
   packageName: "@backstage-community/plugin-todo-backend"

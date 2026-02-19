@@ -8,9 +8,9 @@ metadata:
     - url: https://github.com/ibm-apiconnect/backstage/blob/main/plugins/apic-backstage/README.md
       title: Plugin Overview (README)
     - title: Source Code
-      url: https://github.com/ibm-apiconnect/backstage/tree/main/plugins/apic-backstage
+      url: https://github.com/redhat-developer/rhdh-plugin-export-overlays/tree/main/workspaces/apiconnect
   annotations:
-    backstage.io/source-location: url:https://github.com/ibm-apiconnect/backstage
+    backstage.io/source-location: url:https://github.com/redhat-developer/rhdh-plugin-export-overlays/tree/main/workspaces/apiconnect
   tags: []
 spec:
   packageName: "apic-backstage"

@@ -10,9 +10,9 @@ metadata:
     - url: https://github.com/Dynatrace/backstage-plugin/issues
       title: Issues
     - title: Source Code
-      url: https://github.com/Dynatrace/backstage-plugin
+      url: https://github.com/redhat-developer/rhdh-plugin-export-overlays/tree/main/workspaces/dynatrace-dql
   annotations:
-    backstage.io/source-location: url:https://github.com/Dynatrace/backstage-plugin
+    backstage.io/source-location: url:https://github.com/redhat-developer/rhdh-plugin-export-overlays/tree/main/workspaces/dynatrace-dql
   tags: []
 spec:
   packageName: "@dynatrace/backstage-plugin-dql-backend"

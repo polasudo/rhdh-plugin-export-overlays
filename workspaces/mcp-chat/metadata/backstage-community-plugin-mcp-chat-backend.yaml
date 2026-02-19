@@ -10,7 +10,7 @@ metadata:
     - url: https://github.com/backstage/community-plugins/tree/main/workspaces/mcp-chat/plugins/mcp-chat-backend
       title: Source Code
   annotations:
-    backstage.io/source-location: url:https://github.com/backstage/community-plugins/tree/main/workspaces/mcp-chat/plugins/mcp-chat-backend
+    backstage.io/source-location: url:https://github.com/redhat-developer/rhdh-plugin-export-overlays/tree/main/workspaces/mcp-chat
   tags:
     - ai
     - chat

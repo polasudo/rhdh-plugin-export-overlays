@@ -10,9 +10,9 @@ metadata:
     - url: https://github.com/backstage/backstage/issues
       title: Bugs
     - title: Source Code
-      url: https://github.com/backstage/backstage/tree/master/plugins/signals
+      url: https://github.com/redhat-developer/rhdh-plugin-export-overlays/tree/main/workspaces/backstage
   annotations:
-    backstage.io/source-location: url:https://github.com/backstage/backstage/tree/master/plugins/signals
+    backstage.io/source-location: url:https://github.com/redhat-developer/rhdh-plugin-export-overlays/tree/main/workspaces/backstage
   tags: []
 spec:
   packageName: "@backstage/plugin-signals"

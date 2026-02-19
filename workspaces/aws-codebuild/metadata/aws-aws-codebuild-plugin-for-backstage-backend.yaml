@@ -11,9 +11,9 @@ metadata:
     - url: https://github.com/awslabs/backstage-plugins-for-aws/issues
       title: Bugs
     - title: Source Code
-      url: https://github.com/awslabs/backstage-plugins-for-aws/tree/main/plugins/codebuild/backend
+      url: https://github.com/redhat-developer/rhdh-plugin-export-overlays/tree/main/workspaces/aws-codebuild
   annotations:
-    backstage.io/source-location: url:https://github.com/awslabs/backstage-plugins-for-aws/tree/main/plugins/codebuild/backend
+    backstage.io/source-location: url:https://github.com/redhat-developer/rhdh-plugin-export-overlays/tree/main/workspaces/aws-codebuild
   tags: []
 spec:
   packageName: "@aws/aws-codebuild-plugin-for-backstage-backend"

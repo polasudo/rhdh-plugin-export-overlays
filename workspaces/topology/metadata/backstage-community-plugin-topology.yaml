@@ -10,9 +10,9 @@ metadata:
   - url: https://issues.redhat.com/browse/RHIDP
     title: Bugs
   - title: Source Code
-    url: https://github.com/backstage/community-plugins/tree/main/workspaces/topology
+    url: https://github.com/redhat-developer/rhdh-plugin-export-overlays/tree/main/workspaces/topology
   annotations:
-    backstage.io/source-location: url:https://github.com/backstage/community-plugins/tree/main/workspaces/topology
+    backstage.io/source-location: url:https://github.com/redhat-developer/rhdh-plugin-export-overlays/tree/main/workspaces/topology
   tags: []
 spec:
   packageName: '@backstage-community/plugin-topology'

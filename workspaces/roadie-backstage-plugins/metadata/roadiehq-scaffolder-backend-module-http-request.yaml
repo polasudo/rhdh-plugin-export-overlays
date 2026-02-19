@@ -10,9 +10,9 @@ metadata:
     - url: https://github.com/RoadieHQ/roadie-backstage-plugins/issues
       title: Bugs
     - title: Source Code
-      url: https://github.com/RoadieHQ/roadie-backstage-plugins/tree/main/plugins/scaffolder-actions/scaffolder-backend-module-http-request
+      url: https://github.com/redhat-developer/rhdh-plugin-export-overlays/tree/main/workspaces/roadie-backstage-plugins
   annotations:
-    backstage.io/source-location: url:https://github.com/RoadieHQ/roadie-backstage-plugins/tree/main/plugins/scaffolder-actions/scaffolder-backend-module-http-request
+    backstage.io/source-location: url:https://github.com/redhat-developer/rhdh-plugin-export-overlays/tree/main/workspaces/roadie-backstage-plugins
   tags:
     - software-templates
 spec:
