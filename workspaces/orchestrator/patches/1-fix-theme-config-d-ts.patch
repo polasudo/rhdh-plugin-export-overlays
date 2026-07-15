@@ -1,0 +1,68 @@
+# Patch: Fix theme plugin config.d.ts import path
+# Reason: @backstage/config-loader@1.11.0 validates config.d.ts imports strictly;
+#         @red-hat-developer-hub/backstage-plugin-theme@0.10.1 imports './src' which
+#         is not shipped in the published npm package, breaking orchestrator export.
+# Upstream fix: import type { ThemeConfig } from './dist' in theme plugin config.d.ts
+# Remove when: orchestrator repo-ref includes a theme release with the upstream fix
+--- package.json
++++ package.json
+@@ -56,7 +56,8 @@
+     "react-dom": "^18",
+     "refractor@npm:3.6.0/prismjs": "^1.30.0",
+     "zod-to-json-schema": "3.24.6",
+-    "@backstage/backend-plugin-api": "1.5.0"
++    "@backstage/backend-plugin-api": "1.5.0",
++    "@red-hat-developer-hub/backstage-plugin-theme@^0.10.0": "patch:@red-hat-developer-hub/backstage-plugin-theme@npm%3A0.10.1#./.yarn/patches/@red-hat-developer-hub-backstage-plugin-theme-npm-0.10.1-1e2d57106d.patch"
+   },
+   "prettier": "@backstage/cli/config/prettier",
+   "lint-staged": {
+--- yarn.lock
++++ yarn.lock
+@@ -12663,7 +12663,7 @@
+   languageName: unknown
+   linkType: soft
+ 
+-"@red-hat-developer-hub/backstage-plugin-theme@npm:^0.10.0":
++"@red-hat-developer-hub/backstage-plugin-theme@npm:0.10.1":
+   version: 0.10.1
+   resolution: "@red-hat-developer-hub/backstage-plugin-theme@npm:0.10.1"
+   dependencies:
+@@ -12676,6 +12676,22 @@
+     "@mui/material": ^5.0.0
+     react: ^16.13.1 || ^17.0.0 || ^18.0.0
+   checksum: 29a9aee8d29b1c96d38e771f07556885ba23cbe495f14a998b15ec0cf7b7f4adc8c8e86aaf0a6f52355dfe18998322a325376d35b9b1da6466a370dcdbe9fc7b
++  languageName: node
++  linkType: hard
++
++"@red-hat-developer-hub/backstage-plugin-theme@patch:@red-hat-developer-hub/backstage-plugin-theme@npm%3A0.10.1#./.yarn/patches/@red-hat-developer-hub-backstage-plugin-theme-npm-0.10.1-1e2d57106d.patch::locator=%40internal%2Forchestrator%40workspace%3A.":
++  version: 0.10.1
++  resolution: "@red-hat-developer-hub/backstage-plugin-theme@patch:@red-hat-developer-hub/backstage-plugin-theme@npm%3A0.10.1#./.yarn/patches/@red-hat-developer-hub-backstage-plugin-theme-npm-0.10.1-1e2d57106d.patch::version=0.10.1&hash=9faddc&locator=%40internal%2Forchestrator%40workspace%3A."
++  dependencies:
++    "@mui/icons-material": ^5.17.1
++  peerDependencies:
++    "@backstage/core-plugin-api": ^1.10.9
++    "@backstage/theme": ^0.6.8
++    "@material-ui/icons": ^4.11.3
++    "@mui/icons-material": ^5.17.1
++    "@mui/material": ^5.0.0
++    react: ^16.13.1 || ^17.0.0 || ^18.0.0
++  checksum: 3a41e6135e52031e516c0a158db3e2bbabf09329bd36263a9430272d847a3f2cb22116282d2e52cc1ceb7af21cad2abdd1823114de5efee92e4f1d239b440f6c
+   languageName: node
+   linkType: hard
+ 
+--- /dev/null
++++ .yarn/patches/@red-hat-developer-hub-backstage-plugin-theme-npm-0.10.1-1e2d57106d.patch
+@@ -0,0 +1,13 @@
++diff --git a/config.d.ts b/config.d.ts
++index 0f25986176dbacd184222a102832a155aa0a54f5..cace7a3a202743d5ce279032532eb4e9738b8b35 100644
++--- a/config.d.ts
+++++ b/config.d.ts
++@@ -14,7 +14,7 @@
++  * limitations under the License.
++  */
++ 
++-import { ThemeConfig } from './src';
+++import type { ThemeConfig } from './dist';
++ 
++ export interface Config {
++   app: {
