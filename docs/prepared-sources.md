@@ -30,6 +30,11 @@ instead of the path. Every push writes both tags from the same tarball: the
 mutable one for "latest for this workspace+branch," the pinned one so a
 build stays reachable by exact commit after the mutable tag moves on.
 
+Branch names are sanitized before use in a tag (OCI tags only allow
+`[a-zA-Z0-9_.-]`): `feat/RHIDP-15700-foo` → `feat-RHIDP-15700-foo`. This
+matters in practice — `workflow_dispatch` defaults `overlay-branch` to the
+triggering ref name, which for a feature-branch run contains `/`.
+
 ### Annotations
 
 Attached to both tags:

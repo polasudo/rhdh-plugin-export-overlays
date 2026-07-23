@@ -34,6 +34,16 @@ const SHORT_SHA_LENGTH = 7;
 const ARTIFACT_TYPE = 'application/vnd.rhdh.prepared-sources.v1+tar+gzip';
 const LAYER_MEDIA_TYPE = 'application/vnd.oci.image.layer.v1.tar+gzip';
 
+// OCI/Docker tags must match [a-zA-Z0-9_][a-zA-Z0-9._-]{0,127}. Branch names
+// like "feat/RHIDP-15700-foo" contain "/", which is invalid in a tag (only
+// valid in a repo *path*, and this registry is flat/no-nested-paths anyway).
+function sanitizeTagComponent(raw) {
+  let s = String(raw || '')
+    .replace(/[^a-zA-Z0-9_.-]+/g, '-')
+    .replace(/^[.-]+/, '');
+  return s || 'unknown';
+}
+
 function logInfo(msg) {
   console.log(`[INFO] ${msg}`);
 }
@@ -239,7 +249,7 @@ function main(argv = process.argv.slice(2)) {
     return finish(false, opts.strict, 'oras is required on PATH');
   }
 
-  const tagBase = `${opts.workspace}-${opts.overlayBranch}`;
+  const tagBase = `${sanitizeTagComponent(opts.workspace)}-${sanitizeTagComponent(opts.overlayBranch)}`;
   const shortSha = opts.overlayCommit.slice(0, SHORT_SHA_LENGTH);
   const mutableRef = `${opts.registry}:${tagBase}`;
   const pinnedRef = `${opts.registry}:${tagBase}-${shortSha}`;
@@ -323,6 +333,7 @@ if (require.main === module) {
 module.exports = {
   parseArgs,
   readSourceRef,
+  sanitizeTagComponent,
   main,
   DEFAULT_REGISTRY,
 };

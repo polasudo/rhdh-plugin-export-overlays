@@ -10,9 +10,18 @@ const test = require('node:test');
 const {
   parseArgs,
   readSourceRef,
+  sanitizeTagComponent,
   main,
   DEFAULT_REGISTRY,
 } = require('./pushPreparedSourcesRef.js');
+
+test('sanitizeTagComponent strips characters invalid in OCI tags', () => {
+  assert.equal(sanitizeTagComponent('feat/RHIDP-15700-prepared-sources-ref'), 'feat-RHIDP-15700-prepared-sources-ref');
+  assert.equal(sanitizeTagComponent('release-1.10'), 'release-1.10');
+  assert.equal(sanitizeTagComponent('main'), 'main');
+  assert.equal(sanitizeTagComponent('.leading-dot'), 'leading-dot');
+  assert.equal(sanitizeTagComponent(''), 'unknown');
+});
 
 test('parseArgs reads required flags', () => {
   const opts = parseArgs([
