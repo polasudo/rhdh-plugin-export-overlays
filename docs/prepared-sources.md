@@ -1,25 +1,38 @@
-# Prepared Source OCI Artifacts
+# Prepared Source OCI Artifacts (overlays)
 
-Tracking: [RHIDP-15699](https://redhat.atlassian.net/browse/RHIDP-15699), [RHDHPLAN-1568](https://redhat.atlassian.net/browse/RHDHPLAN-1568)
+Tracking: [RHIDP-15700](https://redhat.atlassian.net/browse/RHIDP-15700),
+[RHIDP-15699](https://redhat.atlassian.net/browse/RHIDP-15699),
+[RHDHPLAN-1568](https://redhat.atlassian.net/browse/RHDHPLAN-1568)
 
 ## Goal
 
-Publish **per-workspace prepared source trees** from this overlays repository so downstream
-(`rhdh-plugin-catalog` / Konflux) can consume a stable OCI contract instead of re-running
-Loops 1–3 in `sync-midstream.sh`.
+Publish **per-workspace prepared source trees from this overlays repository** so
+downstream can consume a stable OCI contract. Preparation is an engineering
+concern and belongs here — not in midstream `sync-midstream.sh`.
 
-Source preparation belongs in overlays (engineering ownership). Productization then becomes
-mechanical consumption of these artifacts.
+## Registry contract (RHIDP-15700)
 
-## Registry contract
+Currently pointed at a personal scratch registry
+(`quay.io/polasudo/testing`) to validate the artifact format before the real
+`quay.io/rhdh/prepared-sources` / `quay.io/rhdh/prepared-sources-ref`
+registries are provisioned — see "Registry is temporary" below.
 
 | Field | Value |
 |-------|-------|
-| Image | `quay.io/rhdh/prepared-sources/<workspace>` |
-| Tag | Overlay branch name (`main`, `release-1.10`, …) — mutable |
-| Artifact type | `application/vnd.rhdh.prepared-source.v1+tar` |
+| Image | `quay.io/polasudo/testing` — flat repo, no nested paths |
+| Tag | `<workspace>-<overlay-branch>` — mutable, overwritten each rebuild |
+| Tag (pinned) | `<workspace>-<overlay-branch>-<short-overlay-commit>` — immutable |
+| Artifact type | `application/vnd.rhdh.prepared-sources.v1+tar+gzip` |
+
+Quay.io personal namespaces reject nested repository paths (`FEATURE_EXTENDED_REPOSITORY_NAMES`
+is not enabled for them), so workspace/branch/commit are encoded in the tag
+instead of the path. Every push writes both tags from the same tarball: the
+mutable one for "latest for this workspace+branch," the pinned one so a
+build stays reachable by exact commit after the mutable tag moves on.
 
 ### Annotations
+
+Attached to both tags:
 
 | Annotation | Meaning |
 |------------|---------|
@@ -29,60 +42,56 @@ mechanical consumption of these artifacts.
 ### Example
 
 ```text
-quay.io/rhdh/prepared-sources/topology:main
-quay.io/rhdh/prepared-sources/orchestrator:release-1.10
+quay.io/polasudo/testing:topology-main
+quay.io/polasudo/testing:topology-main-a1b2c3d
+quay.io/polasudo/testing:backstage-release-1.10
+quay.io/polasudo/testing:backstage-release-1.10-9f8e7d6
 ```
 
-Reference artifacts produced temporarily from midstream (if any) use a separate prefix
-`quay.io/rhdh/prepared-sources-ref/<workspace>` so the two never collide. Consumers switch
-by changing only the registry prefix.
+### Registry is temporary
 
-## Freshness (consumer side)
+`quay.io/polasudo/testing` is a personal namespace used only to validate the
+artifact shape end-to-end. It does not change the dual-registry design from
+the architecture discussion: `prepared-sources` for overlay-produced
+artifacts vs. `prepared-sources-ref` for the sync-midstream reference
+baseline used to diff the two pipelines during the transition. Once the
+format is proven, `registry-prefix` (workflow input) /
+`PREPARED_SOURCES_REF_REGISTRY` (script env var) should be pointed at
+whichever real `quay.io/rhdh/...` registry applies.
 
-After pull, consumers must verify the artifact is not stale relative to the overlays clone:
+## Producer workflow
 
-```bash
-git log <org.rhdh.overlay-commit>..HEAD -- \
-  workspaces/<workspace>/ \
-  versions.json \
-  rhdh-supported-packages.txt \
-  rhdh-community-packages.txt
-```
+`.github/workflows/publish-prepared-sources.yaml` (`workflow_dispatch`)
 
-Non-empty output → fail the build (no fallback to Loops 1–3).
+Per workspace:
 
-## Producer workflow (this repo)
+1. Clone upstream from `source.json`
+2. Apply overlays/patches (`override-sources`)
+3. `yarn install` + `yarn tsc`
+4. Export dynamic plugins (`dist-dynamic`)
+5. Scrub install caches / non-keeper `dist-dynamic` files
+6. `oras push` via `scripts/prepared-sources/pushPreparedSourcesRef.js`
 
-`.github/workflows/publish-prepared-sources.yaml`
+Push failures are **non-blocking by default** (`continue-on-push-error=true`,
+script soft-fails unless `--strict`).
 
-- Manual (`workflow_dispatch`) first, so we can validate Quay repos and content before wiring
-  to every `main` / `release-*` publish.
-- Per-workspace job: clone upstream → apply overlays/patches → yarn install → export
-  dynamic plugins → scrub install caches → `oras push`.
-- Push helper: `scripts/prepared-sources/push-prepared-source.sh`
-
-### Current content vs midstream Loop 3
-
-| Step | Overlays producer (this PR) | Midstream `sync-midstream` |
-|------|-----------------------------|----------------------------|
-| Clone + overlay/patches | Yes | Yes (Loop 1) |
-| Dynamic export (`dist-dynamic`) | Yes | Yes |
-| `update-workspace.js` transforms (Loop 2) | **Not yet** | Yes |
-| Re-export + dependency drift gate (Loop 3) | **Not yet** | Yes |
-
-This PR establishes the **OCI publish path and annotations in overlays**. Follow-ups under
-RHDHPLAN-1568 will bring Loop 2/3–equivalent transforms into this repo (TypeScript + tests)
-so artifacts are Konflux-ready without further midstream mutation.
-
-## Local usage
+### Local / CI helper
 
 ```bash
-# After preparing a workspace tree locally:
-./scripts/prepared-sources/push-prepared-source.sh \
+node scripts/prepared-sources/pushPreparedSourcesRef.js \
   --dir /path/to/prepared/topology \
-  --image quay.io/rhdh/prepared-sources/topology:main \
+  --workspace topology \
+  --overlay-branch main \
   --overlay-commit "$(git rev-parse HEAD)" \
-  --source-ref "$(jq -r '."repo-ref"' workspaces/topology/source.json)"
+  --source-json workspaces/topology/source.json \
+  --dry-run
 ```
 
-Requires `oras` on `PATH` and registry credentials (`oras login quay.io`).
+Requires `oras` on `PATH` and `QUAY_TOKEN` / `QUAY_USERNAME` for real pushes.
+
+## Known gap vs midstream Loop 2/3
+
+This producer currently mirrors overlays export CI (clone → override → yarn →
+export → scrub). Midstream `update-workspace.js` (Loop 2) and Loop 3 drift
+validation are **not** ported yet — track under RHDHPLAN-1568 follow-ups so
+artifacts become fully Konflux-ready without further midstream mutation.

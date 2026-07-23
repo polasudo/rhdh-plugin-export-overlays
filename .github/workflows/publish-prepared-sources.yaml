@@ -1,5 +1,6 @@
-# Publish prepared-source OCI artifacts to quay.io/rhdh/prepared-sources/<workspace>:<branch>
-# See docs/prepared-sources.md (RHIDP-15699 / RHDHPLAN-1568)
+# RHIDP-15700: publish prepared-source OCI artifacts from overlays
+# quay.io/polasudo/testing:<workspace>-<overlay-branch>[-<short-commit>]
+# See docs/prepared-sources.md
 name: Publish Prepared Source OCI Artifacts
 
 on:
@@ -11,20 +12,20 @@ on:
         type: string
         default: ''
       overlay-branch:
-        description: 'Overlay branch to build from (default: current ref)'
+        description: 'Overlay branch / artifact tag (default: current ref)'
         required: false
         type: string
         default: ''
       registry-prefix:
-        description: 'OCI registry prefix for prepared sources'
+        description: 'Flat OCI registry/repo (no nested paths) — workspace/branch/commit go in the tag'
         required: false
         type: string
-        default: 'quay.io/rhdh/prepared-sources'
+        default: 'quay.io/polasudo/testing'
       continue-on-push-error:
-        description: 'If true, push failures warn but do not fail the job'
+        description: 'If true (default), push failures warn but do not fail the job'
         required: false
         type: boolean
-        default: false
+        default: true
 
 concurrency:
   group: prepared-sources-${{ github.ref }}-${{ inputs.workspace-path || 'all' }}
@@ -131,7 +132,7 @@ jobs:
           } >> "${GITHUB_OUTPUT}"
 
   publish:
-    name: prepared-sources / ${{ matrix.workspace.workspace-name }}
+    name: prepared-sources-ref / ${{ matrix.workspace.workspace-name }}
     needs: prepare
     runs-on: ubuntu-latest
     strategy:
@@ -233,36 +234,27 @@ jobs:
       - name: Setup ORAS
         uses: oras-project/setup-oras@9c25bb34621ffa44c0270193e214678344af196c # v1.2.4
 
-      - name: Log in to quay.io
-        env:
-          QUAY_TOKEN: ${{ secrets.QUAY_TOKEN }}
-          QUAY_USERNAME: ${{ secrets.QUAY_USERNAME }}
-        run: |
-          if [[ -z "${QUAY_USERNAME:-}" || -z "${QUAY_TOKEN:-}" ]]; then
-            echo "::error title=Missing Quay credentials::QUAY_USERNAME / QUAY_TOKEN secrets are required."
-            exit 1
-          fi
-          echo "${QUAY_TOKEN}" | oras login quay.io -u "${QUAY_USERNAME}" --password-stdin
-
-      - name: Push prepared-source OCI artifact
+      - name: Push prepared-sources-ref OCI artifact
         id: push
         continue-on-error: ${{ inputs.continue-on-push-error }}
         env:
-          REGISTRY_PREFIX: ${{ inputs.registry-prefix }}
-          WORKSPACE_NAME: ${{ matrix.workspace.workspace-name }}
-          TAG: ${{ needs.prepare.outputs.overlay-repo-ref }}
-          OVERLAY_COMMIT: ${{ needs.prepare.outputs.overlay-commit }}
-          SOURCE_REF: ${{ matrix.workspace.plugins-repo-ref }}
-          SOURCE_DIR: source-repo/${{ matrix.workspace.plugins-root }}
+          QUAY_TOKEN: ${{ secrets.QUAY_TOKEN }}
+          QUAY_USERNAME: ${{ secrets.QUAY_USERNAME }}
+          QUAY_USER: ${{ secrets.QUAY_USERNAME }}
         run: |
           set -euo pipefail
-          image="${REGISTRY_PREFIX}/${WORKSPACE_NAME}:${TAG}"
-          chmod +x overlay-repo/scripts/prepared-sources/push-prepared-source.sh
-          overlay-repo/scripts/prepared-sources/push-prepared-source.sh \
-            --dir "${SOURCE_DIR}" \
-            --image "${image}" \
-            --overlay-commit "${OVERLAY_COMMIT}" \
-            --source-ref "${SOURCE_REF}"
+          strict_flag=()
+          if [[ "${{ inputs.continue-on-push-error }}" != "true" ]]; then
+            strict_flag+=(--strict)
+          fi
+          node overlay-repo/scripts/prepared-sources/pushPreparedSourcesRef.js \
+            --dir "source-repo/${{ matrix.workspace.plugins-root }}" \
+            --workspace "${{ matrix.workspace.workspace-name }}" \
+            --overlay-branch "${{ needs.prepare.outputs.overlay-repo-ref }}" \
+            --overlay-commit "${{ needs.prepare.outputs.overlay-commit }}" \
+            --source-json "overlay-repo/${{ matrix.workspace.overlay-root }}/source.json" \
+            --registry "${{ inputs.registry-prefix }}" \
+            "${strict_flag[@]}"
 
       - name: Warn on non-blocking push failure
         if: ${{ inputs.continue-on-push-error && steps.push.outcome == 'failure' }}
