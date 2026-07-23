@@ -232,7 +232,7 @@ jobs:
           \) -print0 2>/dev/null || true)
 
       - name: Setup ORAS
-        uses: oras-project/setup-oras@9c25bb34621ffa44c0270193e214678344af196c # v1.2.4
+        uses: oras-project/setup-oras@22ce207df3b08e061f537244349aac6ae1d214f6 # v1.2.4
 
       - name: Push prepared-sources-ref OCI artifact
         id: push
