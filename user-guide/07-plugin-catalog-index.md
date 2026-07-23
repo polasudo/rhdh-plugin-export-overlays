@@ -52,14 +52,14 @@ The core orchestrator script is `[scripts/update-index.sh](../scripts/update-ind
 
 ```mermaid
 flowchart TB
-    subgraph "Step 1: Bootstrap"
+    subgraph "Step 1: Plugin Builds Bootstrap"
         S1_IN["workspaces/{name}/metadata/{plugin}.yaml<br/>plugins-list.yaml<br/>versions.json<br/>Package list files"]
         S1["bootstrapPluginBuilds.py"]
         S1_OUT["plugin_builds/{ws}/{plugin}.json<br/>(workspace path, OCI ref, support level)"]
         S1_IN --> S1 --> S1_OUT
     end
 
-    subgraph "Step 2: Registry Enrichment"
+    subgraph "Step 2: Image Metadata Fetch"
         S2["generatePluginBuildInfo.py"]
         S2_OUT["plugin_builds/{ws}/{plugin}.json<br/>(+ digest, build-date, vcs-ref)"]
         S1_OUT --> S2
@@ -76,7 +76,7 @@ flowchart TB
         S3 --> S3_OUT
     end
 
-    subgraph "Step 4: Catalog Index"
+    subgraph "Step 4: Catalog Index Generation"
         S4["generateCatalogIndex.py"]
         S4_OUT["index.json<br/>catalog-entities/<br/>build-report.json"]
         S2_OUT --> S4
@@ -88,7 +88,7 @@ flowchart TB
 
 
 
-### Step 1: Bootstrap (`bootstrapPluginBuilds.py`)
+### Step 1: Plugin Builds Bootstrap (`bootstrapPluginBuilds.py`)
 
 Reads each `workspaces/*/metadata/*.yaml` file and constructs initial `plugin_builds/<workspace>/<image-name>.json` entries. Each entry includes the workspace path, support level, and a constructed OCI tag reference based on the registry type:
 
@@ -97,7 +97,7 @@ Reads each `workspaces/*/metadata/*.yaml` file and constructs initial `plugin_bu
 
 Plugins are filtered to only those matching the provided `--packages-file` list(s).
 
-### Step 2: Registry Enrichment (`generatePluginBuildInfo.py`)
+### Step 2: Image Metadata Fetch (`generatePluginBuildInfo.py`)
 
 Queries the container registry for each plugin's OCI image to retrieve:
 
@@ -105,7 +105,20 @@ Queries the container registry for each plugin's OCI image to retrieve:
 - **Build date** and **VCS ref** from container labels
 - **Upstream/midstream** repo refs from container env vars
 
+Then updates `plugin_builds` with the relevant metadata.
 Images that don't exist in the registry are logged as warnings.
+
+#### Tag Resolution Strategy
+
+For each plugin, the image metadata fetch follows a three-tier resolution:
+
+1. **Exact tag match**: The constructed tag (e.g., `1.10.0--1.5.4`) is queried directly. If the image exists, its metadata is used as-is.
+
+2. **RHDH version alias** (quay.io/rhdh only): If the exact tag is not found and the RHDH version prefix has three parts (x.y.z), the patch version is stripped to try the minor-version alias (e.g., `1.10.2--` → `1.10--`). This is because downstream builds are not repeated for each RHDH patch release if the plugin hasn't changed — a build done during `1.10.0` produces both `1.10.0--1.5.4` and `1.10--1.5.4` tags, and the `1.10--` alias remains valid for `1.10.1`, `1.10.2`, etc. If the exact plugin version is found under the alias, the resolved reference is used without marking it as a fallback. If the alias has tags but not the exact plugin version, the plugin is reported as not found — a new downstream build is needed.
+
+3. **Fallback to latest version**: If the exact plugin version is not found under the original prefix, the latest published plugin version within that prefix is used. This is flagged as a fallback in the output, and the metadata YAML's `version:` field is updated to match. Fallback only applies within the original prefix — the alias (minor-version) prefix is only used for exact matches.
+
+Alias resolution does not apply to ghcr.io (community) builds, which use Backstage version prefixes (`bs_x.y.z__`).
 
 ### Step 3: DPDY Generation (`generateDynamicPluginsDefaultYaml.sh`)
 
@@ -125,7 +138,7 @@ Output structure (truncated):
 plugins:
   # Tag: 1.10--0.8.2, Build date: 2026-05-20T13:45:25Z
   - package: oci://quay.io/rhdh/red-hat-developer-hub-backstage-plugin-adoption-insights:1.10--0.8.2
-    disabled: false
+    enabled: true
     pluginConfig:
       dynamicPlugins:
         frontend:
@@ -133,10 +146,10 @@ plugins:
             # ... frontend wiring config
   # Tag: 1.10--1.2.0, Build date: 2026-05-19T09:12:00Z
   - package: oci://quay.io/rhdh/backstage-community-plugin-acr:1.10--1.2.0
-    disabled: true
+    enabled: false
 ```
 
-### Step 4: Catalog Index (`generateCatalogIndex.py`)
+### Step 4: Catalog Index Generation (`generateCatalogIndex.py`)
 
 The final step that produces the catalog index:
 
