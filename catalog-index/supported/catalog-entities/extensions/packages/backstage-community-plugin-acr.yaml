@@ -16,13 +16,14 @@ metadata:
   tags: []
 spec:
   packageName: "@backstage-community/plugin-acr"
-  dynamicArtifact: ./dynamic-plugins/dist/backstage-community-plugin-acr
-  version: 1.24.1
+  # Tag: 1.11--1.24.1, Build date: 2026-07-06T20:54:02Z
+  dynamicArtifact: "oci://quay.io/rhdh/backstage-community-plugin-acr@sha256:95b2da237929c0c0ba603eec2b4e53de376abdb6b80f048d130b98f494ae1235"
+  version: 1.26.0
   backstage:
     role: frontend-plugin
-    supportedVersions: 1.49.4
+    supportedVersions: 1.52.0
   author: Red Hat
-  support: tech-preview
+  support: community
   lifecycle: active
   partOf:
     - azure-container-registry

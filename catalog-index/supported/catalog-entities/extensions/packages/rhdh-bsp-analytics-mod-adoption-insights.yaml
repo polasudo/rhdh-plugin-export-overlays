@@ -16,8 +16,9 @@ metadata:
   tags: []
 spec:
   packageName: "@red-hat-developer-hub/backstage-plugin-analytics-module-adoption-insights"
-  dynamicArtifact: ./dynamic-plugins/dist/red-hat-developer-hub-backstage-plugin-analytics-module-adoption-insights-dynamic
-  version: 0.8.2
+  # Tag: 1.11--0.8.2, Build date: 2026-07-06T11:23:13Z
+  dynamicArtifact: "oci://quay.io/rhdh/red-hat-developer-hub-backstage-plugin-analytics-module-adoption-insights@sha256:35fe53edddb2e4e0a41031c4347f7dafcb78e070fce355540e7a121ce1cb52e6"
+  version: 0.8.3
   backstage:
     role: frontend-plugin-module
     supportedVersions: 1.49.4

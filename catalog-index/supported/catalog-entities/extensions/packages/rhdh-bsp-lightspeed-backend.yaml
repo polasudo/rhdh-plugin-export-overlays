@@ -16,9 +16,9 @@ metadata:
   tags: []
 spec:
   packageName: "@red-hat-developer-hub/backstage-plugin-lightspeed-backend"
-  # Tag: 1.11--2.8.5, Build date: 2026-05-22T15:08:30Z
-  dynamicArtifact: "oci://quay.io/rhdh/red-hat-developer-hub-backstage-plugin-lightspeed-backend@sha256:3147f09ad990fbcd22a9f613d6982b4534b235a2c2d27684fc1834e196cd83ff"
-  version: 2.8.5
+  # Tag: 1.11--2.8.5, Build date: 2026-07-06T11:15:03Z
+  dynamicArtifact: "oci://quay.io/rhdh/red-hat-developer-hub-backstage-plugin-lightspeed-backend@sha256:fb118e9735a6f6c89c96c8c7dfcc2b076ab3a43a56d347e632eaf625755973b7"
+  version: 2.9.0
   backstage:
     role: backend-plugin
     supportedVersions: 1.49.4

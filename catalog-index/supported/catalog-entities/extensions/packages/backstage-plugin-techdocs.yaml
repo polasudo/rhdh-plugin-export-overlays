@@ -16,11 +16,12 @@ metadata:
   tags: []
 spec:
   packageName: '@backstage/plugin-techdocs'
-  dynamicArtifact: ./dynamic-plugins/dist/backstage-plugin-techdocs
-  version: 1.17.2
+  # Tag: bs_1.52.0__1.17.7, Build date: 2026-05-21T21:43:19Z
+  dynamicArtifact: "oci://ghcr.io/redhat-developer/rhdh-plugin-export-overlays/backstage-plugin-techdocs@sha256:4b52103ac5853e87b0d06624906a3341b6820f4e44ad1f98e389eac9da7e2f0e"
+  version: 1.17.7
   backstage:
     role: frontend-plugin
-    supportedVersions: 1.49.4
+    supportedVersions: 1.52.0
   author: Red Hat
   support: generally-available
   lifecycle: active

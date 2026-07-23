@@ -1,6 +1,6 @@
 {
-  "source-repo": "https://github.com/polasudo/rhdh-plugin-export-overlays/tree/main @ d0b24e99",
-  "build-date": "2026-06-01T15:34:54Z",
-  "backstage-version": "1.49.4",
+  "source-repo": "https://github.com/polasudo/rhdh-plugin-export-overlays/tree/main @ 7c43cd14",
+  "build-date": "2026-07-23T08:12:22Z",
+  "backstage-version": "1.52.0",
   "rhdh-version": "1.11"
 }

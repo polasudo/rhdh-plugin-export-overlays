@@ -16,8 +16,9 @@ metadata:
   tags: []
 spec:
   packageName: '@red-hat-developer-hub/backstage-plugin-adoption-insights'
-  dynamicArtifact: ./dynamic-plugins/dist/red-hat-developer-hub-backstage-plugin-adoption-insights
-  version: 0.8.2
+  # Tag: 1.11--0.8.2, Build date: 2026-07-06T11:41:18Z
+  dynamicArtifact: "oci://quay.io/rhdh/red-hat-developer-hub-backstage-plugin-adoption-insights@sha256:3f12d1d5864c8fa2a8904a0fd9d4fef7a6922abf7b0974821de7d30d7cf7b208"
+  version: 0.8.3
   backstage:
     role: frontend-plugin
     supportedVersions: 1.49.4
@@ -34,6 +35,7 @@ spec:
             red-hat-developer-hub.backstage-plugin-adoption-insights:
               translationResources:
                 - importName: adoptionInsightsTranslations
+                  module: Alpha
                   ref: adoptionInsightsTranslationRef
               appIcons:
                 - name: adoptionInsightsIcon

@@ -17,7 +17,8 @@ metadata:
     - software-catalog
 spec:
   packageName: "@backstage-community/plugin-catalog-backend-module-keycloak"
-  dynamicArtifact: ./dynamic-plugins/dist/backstage-community-plugin-catalog-backend-module-keycloak-dynamic
+  # Tag: 1.11--3.19.2, Build date: 2026-07-06T11:18:01Z
+  dynamicArtifact: "oci://quay.io/rhdh/backstage-community-plugin-catalog-backend-module-keycloak@sha256:ce0c9871af2d92d69a392523c550d1f069a9240441bb47ed9aa0013fc519ce21"
   version: 3.19.2
   backstage:
     role: backend-plugin-module

@@ -15,7 +15,8 @@ metadata:
     backstage.io/source-location: url:https://github.com/redhat-developer/rhdh-plugins/tree/main/workspaces/quickstart
 spec:
   packageName: '@red-hat-developer-hub/backstage-plugin-quickstart'
-  dynamicArtifact: ./dynamic-plugins/dist/red-hat-developer-hub-backstage-plugin-quickstart
+  # Tag: 1.11--1.9.6, Build date: 2026-07-06T11:26:17Z
+  dynamicArtifact: "oci://quay.io/rhdh/red-hat-developer-hub-backstage-plugin-quickstart@sha256:11b3a3fcb13c5dfe9572a163d80cb8afd34bca27a0a844a472d9e9b5f35a6162"
   version: 1.9.6
   backstage:
     role: frontend-plugin
@@ -98,6 +99,26 @@ spec:
               cta:
                 text: View Learning Paths
                 link: /learning-paths
+            - title: Set up Lightspeed
+              titleKey: steps.setupLightspeed.title
+              icon: Lightspeed
+              description: Connect Lightspeed to a supported large language model (LLM) and configure permissions to provide your AI-powered assistance to your developers.
+              descriptionKey: steps.setupLightspeed.description
+              cta:
+                text: Learn more
+                textKey: steps.setupLightspeed.ctaTitle
+                link: https://docs.redhat.com/en/documentation/red_hat_developer_hub/latest/html/interacting_with_red_hat_developer_lightspeed_for_red_hat_developer_hub/
+            - title: Get started with Lightspeed
+              titleKey: steps.getStartedWithLightspeed.title
+              icon: Lightspeed
+              roles:
+                - developer
+              description: Troubleshoot issues, generate code, and learn about platform resources using AI-powered chat.
+              descriptionKey: steps.getStartedWithLightspeed.description
+              cta:
+                text: Learn more
+                textKey: steps.getStartedWithLightspeed.ctaTitle
+                link: https://docs.redhat.com/en/documentation/red_hat_developer_hub/latest/html/interacting_with_red_hat_developer_lightspeed_for_red_hat_developer_hub/
         dynamicPlugins:
           frontend:
             red-hat-developer-hub.backstage-plugin-quickstart:

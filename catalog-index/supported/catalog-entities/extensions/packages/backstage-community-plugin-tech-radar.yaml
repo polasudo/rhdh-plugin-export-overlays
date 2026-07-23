@@ -16,11 +16,12 @@ metadata:
   tags: []
 spec:
   packageName: '@backstage-community/plugin-tech-radar'
-  dynamicArtifact: ./dynamic-plugins/dist/backstage-community-plugin-tech-radar
-  version: 1.17.0
+  # Tag: bs_1.52.0__1.20.0, Build date: 2026-05-22T15:09:45Z
+  dynamicArtifact: "oci://ghcr.io/redhat-developer/rhdh-plugin-export-overlays/backstage-community-plugin-tech-radar@sha256:2dc3b7423552d8f5b763c2be89a31b0a4d03f6375c5fc02e23fa6b1fed219b26"
+  version: 1.20.0
   backstage:
     role: frontend-plugin
-    supportedVersions: 1.49.4
+    supportedVersions: 1.52.0
   author: Red Hat
   support: generally-available
   lifecycle: active

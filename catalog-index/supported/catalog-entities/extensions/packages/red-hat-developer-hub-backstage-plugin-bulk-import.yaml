@@ -16,7 +16,8 @@ metadata:
   tags: []
 spec:
   packageName: '@red-hat-developer-hub/backstage-plugin-bulk-import'
-  dynamicArtifact: ./dynamic-plugins/dist/red-hat-developer-hub-backstage-plugin-bulk-import
+  # Tag: 1.11--7.3.5, Build date: 2026-07-06T11:36:59Z
+  dynamicArtifact: "oci://quay.io/rhdh/red-hat-developer-hub-backstage-plugin-bulk-import@sha256:295e10e54d2a3ec491232448714e69260ce2c59f94d2254caf5e866429355f1d"
   version: 7.3.5
   backstage:
     role: frontend-plugin

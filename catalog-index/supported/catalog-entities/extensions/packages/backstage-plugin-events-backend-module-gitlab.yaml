@@ -8,8 +8,7 @@ metadata:
     - url: https://red.ht/rhdh
       title: Homepage
     - url: https://issues.redhat.com/browse/RHDHBUGS
-      title: "Report issues here. Note: Customers of Red Hat Developer Hub should
-        raise a Red Hat support case instead."
+      title: "Report issues here. Note: Customers of Red Hat Developer Hub should raise a Red Hat support case instead."
     - title: Source Code
       url: https://github.com/backstage/backstage/tree/master/plugins/events-backend-module-gitlab
   annotations:
@@ -17,12 +16,12 @@ metadata:
   tags: []
 spec:
   packageName: "@backstage/plugin-events-backend-module-gitlab"
-  # Tag: 1.11--0.3.10, Build date: 2026-05-29T19:01:39Z
-  dynamicArtifact: "oci://quay.io/rhdh/backstage-plugin-events-backend-module-gitlab@sha256:aa49a7192020bd0cd575cf170028e6f5cc4350666817dcbe4a6ad22eecf8cea4"
-  version: 0.3.10
+  # Tag: bs_1.52.0__0.3.13, Build date: 2026-05-29T19:01:39Z
+  dynamicArtifact: "oci://ghcr.io/redhat-developer/rhdh-plugin-export-overlays/backstage-plugin-events-backend-module-gitlab@sha256:59daf39f4e840625bb96ce3673bd0100c9ae4e83798264d5c2e3929d15af3cb8"
+  version: 0.3.13
   backstage:
     role: backend-plugin-module
-    supportedVersions: 1.49.4
+    supportedVersions: 1.52.0
   author: Red Hat
   support: tech-preview
   lifecycle: active
@@ -34,4 +33,4 @@ spec:
         events:
           modules:
             gitlab:
-              webhookSecret: ${VAULT_GITLAB_WEBHOOK_SECRET}
+              webhookSecret: ${GITLAB_WEBHOOK_SECRET}

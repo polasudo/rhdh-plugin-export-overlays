@@ -16,7 +16,8 @@ metadata:
   tags: []
 spec:
   packageName: "@backstage-community/plugin-analytics-provider-segment"
-  dynamicArtifact: ./dynamic-plugins/dist/backstage-community-plugin-analytics-provider-segment
+  # Tag: 1.11--1.27.0, Build date: 2026-07-06T11:40:04Z
+  dynamicArtifact: "oci://quay.io/rhdh/backstage-community-plugin-analytics-provider-segment@sha256:e72b582a42c482285f39af9e56fbf9f7441b6107d6092210467b1f5299f23dcb"
   version: 1.27.0
   backstage:
     role: frontend-plugin
