@@ -3,20 +3,23 @@
   Copyright (c) Red Hat, Inc.
 
   RHIDP-15700: Ensure a workspace has a self-contained, pinned Yarn binary
-  before install/export, mirroring sync-midstream.sh's yarnPath bootstrap
-  (build/ci/sync-midstream.sh, "Ensure yarnPath is set and the Yarn binary
-  exists").
+  before install/export, mirroring sync-midstream.sh's handling of Yarn
+  (build/ci/sync-midstream.sh):
 
-  Why: hermetic builds (Konflux) have no network access, so relying on
-  corepack to fetch a Yarn version from package.json#packageManager at
-  install time doesn't work downstream. If the workspace doesn't already
-  ship a valid .yarnrc.yml#yarnPath binary, this downloads the pinned
-  version (derived from packageManager) into .yarn/releases/ and points
-  yarnPath at it, then strips packageManager from package.json so nothing
-  downstream tries to trigger a corepack network fetch again.
-
-  If the workspace already ships a working yarnPath binary, this is a
-  no-op (except still removing packageManager, for consistency).
+  1. The "flatten" step (lines ~780-805) copies the monorepo root's
+     .yarnrc.yml + checked-in .yarn/releases/*.cjs binary into each
+     per-workspace output folder — most workspaces (repo-flat: false) don't
+     ship their own .yarnrc.yml/yarnPath at all, only the monorepo root
+     does. Our sparse-checkout already fetches the root's .yarnrc.yml/.yarn
+     into the repo root (not the plugins-root subdirectory yarn actually
+     runs in), so this mirrors that copy.
+  2. The yarnPath bootstrap (lines ~1186-1210) is the fallback for when
+     step 1 doesn't apply (e.g. no repo root available, or the root itself
+     has no checked-in binary): derive the version from
+     package.json#packageManager and download it from repo.yarnpkg.com.
+  3. Either way, packageManager gets stripped from package.json afterwards
+     (lines ~1212-1218) — otherwise a hermetic (network-less) downstream
+     build would have corepack try to fetch it and fail.
 */
 
 'use strict';
@@ -36,22 +39,29 @@ function usage() {
   return `Ensure a hermetic, pinned Yarn binary for a workspace (RHIDP-15700).
 
 Usage:
-  node ensureHermeticYarn.js --dir PATH
+  node ensureHermeticYarn.js --dir PATH [--repo-root PATH]
 
 Options:
-  --dir PATH   Workspace root containing package.json (required)
-  -h, --help   Show this help
+  --dir PATH        Workspace root containing package.json (required)
+  --repo-root PATH  Monorepo clone root to copy a root-level pinned Yarn
+                     binary from, if the workspace doesn't ship its own
+                     (optional — falls back to downloading from
+                     packageManager if omitted or not usable)
+  -h, --help        Show this help
 `;
 }
 
 function parseArgs(argv) {
-  const opts = { dir: '', help: false };
+  const opts = { dir: '', repoRoot: '', help: false };
   const args = [...argv];
   while (args.length > 0) {
     const arg = args.shift();
     switch (arg) {
       case '--dir':
         opts.dir = path.resolve(args.shift());
+        break;
+      case '--repo-root':
+        opts.repoRoot = path.resolve(args.shift());
         break;
       case '-h':
       case '--help':
@@ -86,6 +96,31 @@ function setYarnPath(yarnrcPath, yarnPathValue) {
   fs.writeFileSync(yarnrcPath, content);
 }
 
+function hasWorkingYarnPath(dir) {
+  const yarnPathValue = readYarnPath(path.join(dir, '.yarnrc.yml'));
+  return Boolean(yarnPathValue) && fs.existsSync(path.join(dir, yarnPathValue));
+}
+
+// Mirrors sync-midstream.sh's flatten step: copy a root-level, checked-in
+// Yarn binary into the workspace instead of downloading one.
+function copyYarnFromRepoRoot(dir, repoRoot) {
+  const rootYarnrc = path.join(repoRoot, '.yarnrc.yml');
+  const rootYarnPathValue = readYarnPath(rootYarnrc);
+  if (!rootYarnPathValue) {
+    return false;
+  }
+  const rootBinary = path.join(repoRoot, rootYarnPathValue);
+  if (!fs.existsSync(rootBinary)) {
+    return false;
+  }
+  const destBinary = path.join(dir, rootYarnPathValue);
+  fs.mkdirSync(path.dirname(destBinary), { recursive: true });
+  fs.copyFileSync(rootBinary, destBinary);
+  setYarnPath(path.join(dir, '.yarnrc.yml'), rootYarnPathValue);
+  logInfo(`Copied yarn binary from repo root: ${rootYarnPathValue}`);
+  return true;
+}
+
 async function downloadYarnBinary(version, destPath) {
   const url = `https://repo.yarnpkg.com/${version}/packages/yarnpkg-cli/bin/yarn.js`;
   logInfo(`Downloading yarn ${version} from ${url}`);
@@ -96,6 +131,35 @@ async function downloadYarnBinary(version, destPath) {
   const body = Buffer.from(await res.arrayBuffer());
   fs.mkdirSync(path.dirname(destPath), { recursive: true });
   fs.writeFileSync(destPath, body);
+}
+
+function readPackageManager(dir, repoRoot) {
+  const own = readJson(path.join(dir, 'package.json')).packageManager || '';
+  if (own) {
+    return own;
+  }
+  if (repoRoot) {
+    const rootPackageJson = path.join(repoRoot, 'package.json');
+    if (fs.existsSync(rootPackageJson)) {
+      return readJson(rootPackageJson).packageManager || '';
+    }
+  }
+  return '';
+}
+
+async function downloadYarnFromPackageManager(dir, repoRoot) {
+  const pkgManager = readPackageManager(dir, repoRoot);
+  const versionMatch = /^yarn@(\d+\.\d+\.\d+)/.exec(pkgManager);
+  if (!versionMatch) {
+    throw new Error(
+      `No yarnPath in .yarnrc.yml and no yarn packageManager in package.json (got: ${JSON.stringify(pkgManager)})`,
+    );
+  }
+  const yarnVersion = versionMatch[1];
+  const relativeBinary = `.yarn/releases/yarn-${yarnVersion}.cjs`;
+  await downloadYarnBinary(yarnVersion, path.join(dir, relativeBinary));
+  setYarnPath(path.join(dir, '.yarnrc.yml'), relativeBinary);
+  logInfo(`Set yarnPath to ${relativeBinary} (from packageManager: ${pkgManager})`);
 }
 
 function removePackageManager(packageJsonPath) {
@@ -109,33 +173,22 @@ function removePackageManager(packageJsonPath) {
   return true;
 }
 
-async function ensureHermeticYarn(dir) {
+async function ensureHermeticYarn(dir, repoRoot) {
   const packageJsonPath = path.join(dir, 'package.json');
-  const yarnrcPath = path.join(dir, '.yarnrc.yml');
-
   if (!fs.existsSync(packageJsonPath)) {
     throw new Error(`package.json not found: ${packageJsonPath}`);
   }
 
-  const existingYarnPath = readYarnPath(yarnrcPath);
-  const existingBinary = existingYarnPath ? path.join(dir, existingYarnPath) : '';
-
-  if (existingYarnPath && fs.existsSync(existingBinary)) {
-    logInfo(`Yarn binary already pinned: ${existingYarnPath}`);
+  if (hasWorkingYarnPath(dir)) {
+    logInfo(`Yarn binary already pinned: ${readYarnPath(path.join(dir, '.yarnrc.yml'))}`);
+  } else if (
+    repoRoot &&
+    path.resolve(repoRoot) !== path.resolve(dir) &&
+    copyYarnFromRepoRoot(dir, repoRoot)
+  ) {
+    // handled, logged inside copyYarnFromRepoRoot
   } else {
-    const pkg = readJson(packageJsonPath);
-    const pkgManager = pkg.packageManager || '';
-    const versionMatch = /^yarn@(\d+\.\d+\.\d+)/.exec(pkgManager);
-    if (!versionMatch) {
-      throw new Error(
-        `No yarnPath in .yarnrc.yml and no yarn packageManager in package.json (got: ${JSON.stringify(pkgManager)})`,
-      );
-    }
-    const yarnVersion = versionMatch[1];
-    const relativeBinary = `.yarn/releases/yarn-${yarnVersion}.cjs`;
-    await downloadYarnBinary(yarnVersion, path.join(dir, relativeBinary));
-    setYarnPath(yarnrcPath, relativeBinary);
-    logInfo(`Set yarnPath to ${relativeBinary} (from packageManager: ${pkgManager})`);
+    await downloadYarnFromPackageManager(dir, repoRoot);
   }
 
   removePackageManager(packageJsonPath);
@@ -163,7 +216,7 @@ async function main(argv = process.argv.slice(2)) {
   }
 
   try {
-    await ensureHermeticYarn(opts.dir);
+    await ensureHermeticYarn(opts.dir, opts.repoRoot);
   } catch (err) {
     console.error(`[ERROR] ${err.message}`);
     return 1;
@@ -182,6 +235,8 @@ module.exports = {
   parseArgs,
   readYarnPath,
   setYarnPath,
+  hasWorkingYarnPath,
+  copyYarnFromRepoRoot,
   removePackageManager,
   ensureHermeticYarn,
   main,

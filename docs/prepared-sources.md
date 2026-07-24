@@ -80,13 +80,22 @@ Per workspace:
 
 ### Hermetic Yarn binary
 
-Mirrors sync-midstream.sh's yarnPath bootstrap (`build/ci/sync-midstream.sh`,
-"Ensure yarnPath is set and the Yarn binary exists"). If the workspace
-doesn't already ship a working `.yarnrc.yml#yarnPath` binary, this downloads
-the version pinned in `package.json#packageManager` into
-`.yarn/releases/yarn-X.Y.Z.cjs`, points `yarnPath` at it, and strips
-`packageManager` from `package.json` — otherwise a hermetic (network-less)
-downstream build would have corepack try to fetch it and fail.
+Mirrors sync-midstream.sh's Yarn handling (`build/ci/sync-midstream.sh`).
+Most workspaces (`repo-flat: false`) don't ship their own
+`.yarnrc.yml#yarnPath` — only the monorepo root does, as a checked-in
+`.yarn/releases/yarn-X.Y.Z.cjs` binary. Our sparse-checkout already fetches
+that root-level file (it's outside `!/workspaces/`), just not into the
+`plugins-root` subdirectory `yarn install` actually runs in. In order:
+
+1. If the workspace already has a working `yarnPath` binary, do nothing.
+2. Else copy the repo root's pinned binary + `yarnPath` into the workspace
+   (mirrors sync-midstream.sh's "flatten" step) — this is the common case.
+3. Else fall back to downloading the version pinned in
+   `package.json#packageManager` from `repo.yarnpkg.com`.
+
+Either way, `packageManager` gets stripped from `package.json` afterwards —
+otherwise a hermetic (network-less) downstream build would have corepack
+try to fetch it and fail.
 
 Push failures are **non-blocking by default** (`continue-on-push-error=true`,
 script soft-fails unless `--strict`).

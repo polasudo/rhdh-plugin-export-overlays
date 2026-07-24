@@ -10,6 +10,8 @@ const test = require('node:test');
 const {
   readYarnPath,
   setYarnPath,
+  hasWorkingYarnPath,
+  copyYarnFromRepoRoot,
   removePackageManager,
   ensureHermeticYarn,
 } = require('./ensureHermeticYarn.js');
@@ -52,6 +54,23 @@ test('setYarnPath overwrites an existing yarnPath line in place', () => {
   fs.rmSync(dir, { recursive: true, force: true });
 });
 
+test('hasWorkingYarnPath is false when yarnrc is missing, and false when binary is missing', () => {
+  const dir = mkWorkspace();
+  assert.equal(hasWorkingYarnPath(dir), false);
+  fs.writeFileSync(path.join(dir, '.yarnrc.yml'), 'yarnPath: .yarn/releases/yarn-4.1.0.cjs\n');
+  assert.equal(hasWorkingYarnPath(dir), false);
+  fs.rmSync(dir, { recursive: true, force: true });
+});
+
+test('hasWorkingYarnPath is true when the pinned binary exists', () => {
+  const dir = mkWorkspace();
+  fs.mkdirSync(path.join(dir, '.yarn', 'releases'), { recursive: true });
+  fs.writeFileSync(path.join(dir, '.yarn', 'releases', 'yarn-4.1.0.cjs'), '// pinned\n');
+  fs.writeFileSync(path.join(dir, '.yarnrc.yml'), 'yarnPath: .yarn/releases/yarn-4.1.0.cjs\n');
+  assert.equal(hasWorkingYarnPath(dir), true);
+  fs.rmSync(dir, { recursive: true, force: true });
+});
+
 test('removePackageManager strips the field and reports it changed', () => {
   const dir = mkWorkspace();
   const pkgPath = path.join(dir, 'package.json');
@@ -71,6 +90,33 @@ test('removePackageManager is a no-op when field is absent', () => {
   fs.rmSync(dir, { recursive: true, force: true });
 });
 
+test('copyYarnFromRepoRoot copies the root-pinned binary and sets yarnPath in the workspace', () => {
+  const repoRoot = mkWorkspace();
+  const dir = mkWorkspace();
+  fs.mkdirSync(path.join(repoRoot, '.yarn', 'releases'), { recursive: true });
+  fs.writeFileSync(path.join(repoRoot, '.yarn', 'releases', 'yarn-4.12.0.cjs'), '// root pinned binary\n');
+  fs.writeFileSync(path.join(repoRoot, '.yarnrc.yml'), 'nodeLinker: node-modules\nyarnPath: .yarn/releases/yarn-4.12.0.cjs\n');
+
+  const copied = copyYarnFromRepoRoot(dir, repoRoot);
+
+  assert.equal(copied, true);
+  assert.equal(hasWorkingYarnPath(dir), true);
+  assert.equal(
+    fs.readFileSync(path.join(dir, '.yarn', 'releases', 'yarn-4.12.0.cjs'), 'utf8'),
+    '// root pinned binary\n',
+  );
+  fs.rmSync(repoRoot, { recursive: true, force: true });
+  fs.rmSync(dir, { recursive: true, force: true });
+});
+
+test('copyYarnFromRepoRoot returns false when the root has no usable binary', () => {
+  const repoRoot = mkWorkspace();
+  const dir = mkWorkspace();
+  assert.equal(copyYarnFromRepoRoot(dir, repoRoot), false);
+  fs.rmSync(repoRoot, { recursive: true, force: true });
+  fs.rmSync(dir, { recursive: true, force: true });
+});
+
 test('ensureHermeticYarn is a no-op download when a valid yarnPath binary already exists', async () => {
   const dir = mkWorkspace();
   fs.writeFileSync(path.join(dir, 'package.json'), JSON.stringify({ name: 'x', packageManager: 'yarn@4.1.0' }));
@@ -85,7 +131,28 @@ test('ensureHermeticYarn is a no-op download when a valid yarnPath binary alread
   fs.rmSync(dir, { recursive: true, force: true });
 });
 
-test('ensureHermeticYarn throws when packageManager is missing and no yarnPath exists', async () => {
+test('ensureHermeticYarn prefers copying from repo root over downloading', async () => {
+  const repoRoot = mkWorkspace();
+  const dir = mkWorkspace();
+  fs.writeFileSync(path.join(dir, 'package.json'), JSON.stringify({ name: '@internal/global-header' }));
+  fs.mkdirSync(path.join(repoRoot, '.yarn', 'releases'), { recursive: true });
+  fs.writeFileSync(path.join(repoRoot, '.yarn', 'releases', 'yarn-4.12.0.cjs'), '// root pinned binary\n');
+  fs.writeFileSync(path.join(repoRoot, '.yarnrc.yml'), 'yarnPath: .yarn/releases/yarn-4.12.0.cjs\n');
+  fs.writeFileSync(path.join(repoRoot, 'package.json'), JSON.stringify({ packageManager: 'yarn@4.12.0' }));
+
+  await ensureHermeticYarn(dir, repoRoot);
+
+  assert.equal(hasWorkingYarnPath(dir), true);
+  assert.equal(
+    fs.readFileSync(path.join(dir, '.yarn', 'releases', 'yarn-4.12.0.cjs'), 'utf8'),
+    '// root pinned binary\n',
+  );
+  assert.equal(JSON.parse(fs.readFileSync(path.join(dir, 'package.json'), 'utf8')).packageManager, undefined);
+  fs.rmSync(repoRoot, { recursive: true, force: true });
+  fs.rmSync(dir, { recursive: true, force: true });
+});
+
+test('ensureHermeticYarn throws when packageManager is missing and no yarnPath exists anywhere', async () => {
   const dir = mkWorkspace();
   fs.writeFileSync(path.join(dir, 'package.json'), JSON.stringify({ name: 'x' }));
   await assert.rejects(() => ensureHermeticYarn(dir), /No yarnPath.*no yarn packageManager/);

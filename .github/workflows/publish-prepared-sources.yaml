@@ -193,7 +193,8 @@ jobs:
       - name: Ensure hermetic yarn binary (RHIDP-15700)
         run: |
           node overlay-repo/scripts/prepared-sources/ensureHermeticYarn.js \
-            --dir "source-repo/${{ matrix.workspace.plugins-root }}"
+            --dir "source-repo/${{ matrix.workspace.plugins-root }}" \
+            --repo-root "source-repo"
 
       - name: Enable Corepack
         working-directory: source-repo/${{ matrix.workspace.plugins-root }}
