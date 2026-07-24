@@ -190,6 +190,11 @@ jobs:
           node-version: ${{ needs.prepare.outputs.node-version }}
           registry-url: https://registry.npmjs.org/
 
+      - name: Ensure hermetic yarn binary (RHIDP-15700)
+        run: |
+          node overlay-repo/scripts/prepared-sources/ensureHermeticYarn.js \
+            --dir "source-repo/${{ matrix.workspace.plugins-root }}"
+
       - name: Enable Corepack
         working-directory: source-repo/${{ matrix.workspace.plugins-root }}
         run: corepack enable
