@@ -38,6 +38,9 @@ from plugin_utils import (
 # Global registry config
 REGISTRY_BASE = ""
 
+# Default midstream branch when git HEAD is unavailable (next / development line)
+DEFAULT_MIDSTREAM_BRANCH = "main"
+
 # Registry path constants
 QUAY_RHDH_PREFIX = "quay.io/rhdh/"
 RARC_DOMAIN = "registry.access.redhat.com"
@@ -642,20 +645,20 @@ def _fallback_regex_fragment(container: str) -> str:
 def rhdh_git_branch_for_midstream(midstream_branch: str) -> str:
     """Map a midstream catalog branch to the matching ``redhat-developer/rhdh`` git branch.
 
-    - ``main`` / ``rhdh-1-rhel-9`` (next) → ``main``
+    - ``main`` (next) → ``main``
     - ``rhdh-1.10-rhel-9`` → ``release-1.10``
     """
     branch = (midstream_branch or "").strip()
-    if branch in ("main", "rhdh-1-rhel-9", ""):
-        return "main"
+    if branch in (DEFAULT_MIDSTREAM_BRANCH, ""):
+        return DEFAULT_MIDSTREAM_BRANCH
     match = re.fullmatch(r"rhdh-([0-9]+(?:\.[0-9]+)+)-rhel-9", branch)
     if match:
         return f"release-{match.group(1)}"
-    return "main"
+    return DEFAULT_MIDSTREAM_BRANCH
 
 
 def current_midstream_branch() -> str:
-    """Return the current git branch name, or ``rhdh-1-rhel-9`` if unavailable."""
+    """Return the current git branch name, or ``main`` if unavailable."""
     try:
         result = subprocess.run(
             ["git", "rev-parse", "--abbrev-ref", "HEAD"],
@@ -668,7 +671,7 @@ def current_midstream_branch() -> str:
             return result.stdout.strip()
     except (OSError, subprocess.SubprocessError):
         pass
-    return "rhdh-1-rhel-9"
+    return DEFAULT_MIDSTREAM_BRANCH
 
 
 def fetch_rhdh_package_version(rhdh_branch: str | None = None) -> str | None:
@@ -716,17 +719,17 @@ def print_fallback_rebuild_cta(fallbacks: list[tuple[str, str, str]]) -> None:
         parts.append(_fallback_regex_fragment(container))
 
     regex = "|".join(parts)
-    # next midstream (main / rhdh-1-rhel-9) uses the 1.next alias; release
-    # branches use the concrete x.y.z from redhat-developer/rhdh package.json
+    # Prefer -v x.y.z --next on the next stream (matches generatePipelineRunsForPlugins.sh /
+    # RELEASE_GUIDE). Release branches use plain -v x.y.z from rhdh package.json.
+    # (-v main also works once package.json major matches the next stream.)
     rhdh_branch = rhdh_git_branch_for_midstream(current_midstream_branch())
-    if rhdh_branch == "main":
-        # TODO switch to 2.next when we move to the main branch downstream
-        version = "1.next"
-    else:
-        version = fetch_rhdh_package_version(rhdh_branch) or "<version>"
+    version = fetch_rhdh_package_version(rhdh_branch) or "<version>"
+    version_args = (
+        f"-v {version} --next" if rhdh_branch == DEFAULT_MIDSTREAM_BRANCH else f"-v {version}"
+    )
     print(
         f"\n{Colors.YELLOW}Re-export with:{Colors.NORM}\n"
-        f".tekton/generatePipelineRunsForPlugins.sh --trigger --regex '{regex}' -v {version}\n"
+        f".tekton/generatePipelineRunsForPlugins.sh --trigger --regex '{regex}' {version_args}\n"
         f"\n{Colors.YELLOW}Then re-run ./build/ci/update-index.sh{Colors.NORM}\n"
     )
 
@@ -865,103 +868,105 @@ def update_plugin_build_files(plugin_builds_dir: Path, overlays_dir: Path, repor
                     f"{Colors.NORM}"
                 )
 
-                if report:
-                    for pname, pdata in data.items():
-                        digest = pdata.get('digest', '')
-                        if digest:
-                            stage_kwargs = {"digest": digest}
-                            if pdata.get('fallback'):
-                                resolved_ref = pdata.get('registryReference', '')
-                                ref_tag = resolved_ref.rsplit(':', 1)[-1]
-                                stage_kwargs["fallback"] = True
-                                stage_kwargs["requestedTag"] = pdata.get('requestedTag', '')
-                                stage_kwargs["resolvedTag"] = ref_tag
-                                separator = "__" if "ghcr.io" in resolved_ref else "--"
-                                if separator in ref_tag:
-                                    resolved_version = ref_tag.rsplit(separator, 1)[-1]
-                                    report.add_plugin(pname, version=resolved_version)
-                            report.set_stage(
-                                pname, "image-metadata-fetch", "pass",
-                                **stage_kwargs,
-                            )
-                            # Update bootstrap oci_ref to the resolved reference
-                            # so the status page links to the actual image
+            # Metadata YAML is restored from backup each update-index run; sync every time
+            # we have fresh plugin_data, not only when plugin_builds/*.json changed.
+            if report:
+                for pname, pdata in data.items():
+                    digest = pdata.get('digest', '')
+                    if digest:
+                        stage_kwargs = {"digest": digest}
+                        if pdata.get('fallback'):
                             resolved_ref = pdata.get('registryReference', '')
-                            if resolved_ref:
-                                bootstrap_stage = report.get_stage(pname, "bootstrap")
-                                if bootstrap_stage:
-                                    bootstrap_stage["oci_ref"] = resolved_ref
+                            ref_tag = resolved_ref.rsplit(':', 1)[-1]
+                            stage_kwargs["fallback"] = True
+                            stage_kwargs["requestedTag"] = pdata.get('requestedTag', '')
+                            stage_kwargs["resolvedTag"] = ref_tag
+                            separator = "__" if "ghcr.io" in resolved_ref else "--"
+                            if separator in ref_tag:
+                                resolved_version = ref_tag.rsplit(separator, 1)[-1]
+                                report.add_plugin(pname, version=resolved_version)
+                        report.set_stage(
+                            pname, "image-metadata-fetch", "pass",
+                            **stage_kwargs,
+                        )
+                        # Update bootstrap oci_ref to the resolved reference
+                        # so the status page links to the actual image
+                        resolved_ref = pdata.get('registryReference', '')
+                        if resolved_ref:
+                            bootstrap_stage = report.get_stage(pname, "bootstrap")
+                            if bootstrap_stage:
+                                bootstrap_stage["oci_ref"] = resolved_ref
 
-                # Update the equivalent metadata.yaml file in the overlays directory
-                metadata_dir = overlays_dir / "workspaces" / relative_path.parent / "metadata"
-                if metadata_dir.exists():
-                    for plugin_name, plugin_data in data.items():
-                        registry_reference_tag = plugin_data.get('registryReference', '')
-                        if not registry_reference_tag:
+            metadata_dir = overlays_dir / "workspaces" / relative_path.parent / "metadata"
+            if metadata_dir.exists():
+                for plugin_name, plugin_data in data.items():
+                    registry_reference_tag = plugin_data.get('registryReference', '')
+                    if not registry_reference_tag:
+                        continue
+                    digest = plugin_data.get("digest")
+                    registry_reference_digest = registry_reference_tag
+                    if digest:
+                        ref_base = (registry_reference_tag.split("@")[0] if "@" in registry_reference_tag
+                                    else registry_reference_tag.rsplit(":", 1)[0])
+                        registry_reference_digest = f"{ref_base}@{digest}"
+                    registry_reference_digest = get_output_registry_reference(registry_reference_digest)
+                    metadata_file = None
+                    for f in metadata_dir.glob("*.yaml"):
+                        try:
+                            with open(f, "r", encoding='utf-8') as fp:
+                                meta = yaml.safe_load(fp)
+                            spec = (meta or {}).get("spec") or {}
+                            pkg = spec.get("packageName") or ""
+                            da = spec.get("dynamicArtifact") or ""
+                            log_debug(f"pkg: {pkg}; f.stem: {f.stem}; plugin_name: {plugin_name}")
+                            image_in_artifact = ("/" + plugin_name + ":" in da or "/" + plugin_name + "@" in da)
+                            stem_matches = f.stem.replace("redhat-backstage-plugin-", "red-hat-developer-hub-backstage-plugin-") == plugin_name
+                            if image_in_artifact or stem_matches or f.stem == plugin_name:
+                                metadata_file = f
+                                break
+                        except Exception:
                             continue
-                        digest = plugin_data.get("digest")
-                        registry_reference_digest = registry_reference_tag
-                        if digest:
-                            ref_base = (registry_reference_tag.split("@")[0] if "@" in registry_reference_tag
-                                        else registry_reference_tag.rsplit(":", 1)[0])
-                            registry_reference_digest = f"{ref_base}@{digest}"
-                        registry_reference_digest = get_output_registry_reference(registry_reference_digest)
-                        metadata_file = None
-                        for f in metadata_dir.glob("*.yaml"):
-                            try:
-                                with open(f, "r", encoding='utf-8') as fp:
-                                    meta = yaml.safe_load(fp)
-                                spec = (meta or {}).get("spec") or {}
-                                pkg = spec.get("packageName") or ""
-                                da = spec.get("dynamicArtifact") or ""
-                                log_debug(f"pkg: {pkg}; f.stem: {f.stem}; plugin_name: {plugin_name}")
-                                image_in_artifact = ("/" + plugin_name + ":" in da or "/" + plugin_name + "@" in da)
-                                stem_matches = f.stem.replace("redhat-backstage-plugin-", "red-hat-developer-hub-backstage-plugin-") == plugin_name
-                                if image_in_artifact or stem_matches or f.stem == plugin_name:
-                                    metadata_file = f
-                                    break
-                            except Exception:
-                                continue
-                        if metadata_file is not None:
-                            with open(metadata_file, "r", encoding='utf-8') as f:
-                                content = f.read()
-                            try:
-                                meta = yaml.safe_load(content)
-                                da = ((meta or {}).get("spec") or {}).get("dynamicArtifact") or ""
-                            except Exception:
-                                da = ""
-                            if da.startswith("oci://"):
-                                new_oci = f"oci://{registry_reference_digest}"
-                                fallback_version = None
-                                if plugin_data.get('fallback'):
-                                    tag_str = registry_reference_tag.rsplit(':', 1)[-1] if ':' in registry_reference_tag else ""
-                                    sep = "__" if "ghcr.io" in registry_reference_tag else "--"
-                                    if sep in tag_str:
-                                        fallback_version = tag_str.rsplit(sep, 1)[-1]
-                                lines = content.splitlines()
-                                out = []
-                                for line in lines:
-                                    stripped = line.lstrip()
-                                    if stripped.startswith("dynamicArtifact:") and ("oci://" in line or "quay.io" in line or "registry.access" in line or "ghcr.io" in line):
-                                        indent = line[: len(line) - len(stripped)]
-                                        tag_parts = registry_reference_tag.split(":")
-                                        tag = tag_parts[1] if len(tag_parts) > 1 else ""
-                                        build_date = plugin_data.get("build-date")
-                                        while out and out[-1].lstrip().startswith("# Tag:"):
-                                            out.pop()
-                                        if build_date:
-                                            out.append(f'{indent}# Tag: {tag}, Build date: {build_date}')
-                                        else:
-                                            out.append(f'{indent}# Tag: {tag}')
-                                        out.append(f'{indent}dynamicArtifact: "{new_oci}"')
-                                    elif fallback_version and stripped.startswith("version:"):
-                                        indent = line[: len(line) - len(stripped)]
-                                        out.append(f'{indent}version: {fallback_version}')
+                    if metadata_file is not None:
+                        with open(metadata_file, "r", encoding='utf-8') as f:
+                            content = f.read()
+                        try:
+                            meta = yaml.safe_load(content)
+                            da = ((meta or {}).get("spec") or {}).get("dynamicArtifact") or ""
+                        except Exception:
+                            da = ""
+                        if da.startswith("oci://"):
+                            new_oci = f"oci://{registry_reference_digest}"
+                            fallback_version = None
+                            if plugin_data.get('fallback'):
+                                tag_str = registry_reference_tag.rsplit(':', 1)[-1] if ':' in registry_reference_tag else ""
+                                sep = "__" if "ghcr.io" in registry_reference_tag else "--"
+                                if sep in tag_str:
+                                    fallback_version = tag_str.rsplit(sep, 1)[-1]
+                            lines = content.splitlines()
+                            out = []
+                            for line in lines:
+                                stripped = line.lstrip()
+                                if stripped.startswith("dynamicArtifact:") and ("oci://" in line or "quay.io" in line or "registry.access" in line or "ghcr.io" in line):
+                                    indent = line[: len(line) - len(stripped)]
+                                    tag_parts = registry_reference_tag.split(":")
+                                    tag = tag_parts[1] if len(tag_parts) > 1 else ""
+                                    build_date = plugin_data.get("build-date")
+                                    while out and out[-1].lstrip().startswith("# Tag:"):
+                                        out.pop()
+                                    if build_date:
+                                        out.append(f'{indent}# Tag: {tag}, Build date: {build_date}')
                                     else:
-                                        out.append(line)
+                                        out.append(f'{indent}# Tag: {tag}')
+                                    out.append(f'{indent}dynamicArtifact: "{new_oci}"')
+                                elif fallback_version and stripped.startswith("version:"):
+                                    indent = line[: len(line) - len(stripped)]
+                                    out.append(f'{indent}version: {fallback_version}')
+                                else:
+                                    out.append(line)
+                            new_content = "\n".join(out) + "\n"
+                            if new_content != content:
                                 with open(metadata_file, "w", encoding='utf-8') as f:
-                                    f.write("\n".join(out))
-                                    f.write("\n")
+                                    f.write(new_content)
                                 overlays_metadata_changes += 1
                                 log_debug(f"Set 'dynamicArtifact: oci://{registry_reference_digest}'")
                                 log_debug(f" in {metadata_file}")
