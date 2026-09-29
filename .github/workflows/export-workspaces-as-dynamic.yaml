@@ -45,6 +45,12 @@ on:
         required: false
         default: ''
 
+      overlay-repo:
+        description: Repository of the overlay structure (caller repo by default).
+        type: string
+        required: false
+        default: ''
+
       publish-container:
         description: Publish a container image for the dynamic plugins
         required: true
@@ -59,6 +65,12 @@ on:
         description: Optional commit ID of the last successful publishing of plugin container images
         type: string
         required: false
+
+      prepare-downstream-sources:
+        description: After export, run prepare-sources and upload prepared tree as artifact.
+        type: boolean
+        required: false
+        default: false
   
   workflow_dispatch:
     inputs:
@@ -96,6 +108,12 @@ on:
         type: string
         required: true
 
+      overlay-repo:
+        description: Overlay repository (defaults to this repo if empty)
+        type: string
+        required: false
+        default: 'redhat-developer/rhdh-plugin-export-overlays'
+
       publish-container:
         description: Publish a container image for the dynamic plugins
         required: false
@@ -111,6 +129,12 @@ on:
         description: Optional commit ID of the last successful publishing of plugin container images
         type: string
         required: false
+
+      prepare-downstream-sources:
+        description: After export, run prepare-sources and upload prepared tree as artifact (RHIDP-15846 test)
+        type: boolean
+        required: false
+        default: false
   
 concurrency:
   group: ${{ github.workflow_ref }}-${{ github.ref }}
@@ -118,17 +142,20 @@ concurrency:
 
 jobs:
   export:
-    uses: redhat-developer/rhdh-plugin-export-utils/.github/workflows/export-workspaces-as-dynamic.yaml@main
+    # TEMP: pin to RHIDP-15846 utils PR branch for testing. Revert before merge.
+    uses: polasudo/rhdh-plugin-export-utils/.github/workflows/export-workspaces-as-dynamic.yaml@RHIDP-15846-workflow-integration
     with:
       node-version: ${{ inputs.node-version }}
       janus-cli-version: ${{ inputs.janus-cli-version }}
       cli-package: ${{ inputs.cli-package }}
       upload-project-on-error: ${{ inputs.upload-project-on-error }}
       overlay-branch: ${{ inputs.overlay-branch }}
+      overlay-repo: ${{ inputs.overlay-repo }}
       workspace-path: ${{ inputs.workspace-path }}
       publish-container: ${{ inputs.publish-container }}
       image-repository-prefix: ${{ inputs.image-repository-prefix }}
       image-registry-user: ${{ inputs.image-registry-user || github.actor }}
+      prepare-downstream-sources: ${{ inputs.prepare-downstream-sources }}
       
     secrets:
       image-registry-password: ${{ secrets.image-registry-password || secrets.GITHUB_TOKEN }}
